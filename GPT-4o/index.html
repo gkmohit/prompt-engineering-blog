@@ -3,51 +3,664 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPT-4o - Prompt Engineering Blog</title>
+    <title>Restaurant Staff Scheduler - GPT-4o Prototype</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #10A37F 0%, #1A7F72 100%);
             min-height: 100vh;
+            padding: 20px;
         }
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
-            color: #333;
+        .header {
+            background: linear-gradient(135deg, #10A37F, #1A7F72);
+            color: white;
+            padding: 30px;
             text-align: center;
-            margin-bottom: 30px;
         }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1rem; }
         .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #667eea;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
             text-decoration: none;
             padding: 10px 20px;
-            border: 2px solid #667eea;
-            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
             transition: all 0.3s ease;
         }
-        .back-link:hover {
-            background: #667eea;
+        .back-link:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+        .main-content { padding: 30px; }
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .tab.active { color: #10A37F; border-bottom-color: #10A37F; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #10A37F;
+        }
+        .btn {
+            background: linear-gradient(135deg, #10A37F, #1A7F72);
             color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 163, 127, 0.3); }
+        .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .employee-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #10A37F;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .employee-card h3 { color: #333; margin-bottom: 10px; }
+        .employee-card p { color: #666; margin-bottom: 5px; }
+        .skills-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .skill-tag {
+            background: #10A37F;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .schedule-grid { overflow-x: auto; margin-top: 20px; }
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .schedule-table th {
+            background: #10A37F;
+            color: white;
+            font-weight: 600;
+        }
+        .schedule-slot {
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .schedule-slot:hover { background: #e9ecef; }
+        .schedule-slot.assigned { background: #d4edda; color: #155724; }
+        .total-hours { background: #fff3cd; font-weight: 600; }
+        .availability-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .day-column { text-align: center; }
+        .day-column h4 {
+            background: #10A37F;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .time-slot {
+            background: #f8f9fa;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .time-slot:hover { background: #e9ecef; }
+        .time-slot.available { background: #d4edda; color: #155724; }
+        .suggestions-box {
+            background: #e7f3ff;
+            border: 2px solid #10A37F;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .suggestions-box h3 { color: #1976D2; margin-bottom: 15px; }
+        .suggestion-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover { color: #000; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .employee-grid { grid-template-columns: 1fr; }
+            .availability-grid { grid-template-columns: repeat(2, 1fr); }
+            .tab-container { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="../index.html" class="back-link">← Back to Home</a>
-        <h1>GPT-4o Prompt Engineering</h1>
-        <p>Welcome to the GPT-4o section of our prompt engineering blog. Here you'll find insights, techniques, and best practices for working with OpenAI's GPT-4o model.</p>
-        <p>Content coming soon...</p>
+        <div class="header">
+            <a href="../index.html" class="back-link">← Back to Home</a>
+            <h1>🍽️ Restaurant Staff Scheduler</h1>
+            <p>Streamline your staff scheduling with AI-powered suggestions</p>
+        </div>
+        <div class="main-content">
+            <div class="tab-container">
+                <button class="tab active" onclick="showTab('employees')">👥 Employees</button>
+                <button class="tab" onclick="showTab('availability')">📅 Availability</button>
+                <button class="tab" onclick="showTab('schedule')">📊 Schedule</button>
+                <button class="tab" onclick="showTab('suggestions')">💡 AI Suggestions</button>
+                <button class="tab" onclick="showTab('analytics')">📈 Analytics</button>
+            </div>
+            <!-- Employees Tab -->
+            <div id="employees" class="tab-content active">
+                <h2>Employee Management</h2>
+                <form id="employeeForm" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="employeeName">Employee Name</label>
+                            <input type="text" id="employeeName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeeRole">Primary Role</label>
+                            <select id="employeeRole" required>
+                                <option value="">Select Role</option>
+                                <option value="server">Server</option>
+                                <option value="cook">Cook</option>
+                                <option value="bartender">Bartender</option>
+                                <option value="host">Host/Hostess</option>
+                                <option value="dishwasher">Dishwasher</option>
+                                <option value="manager">Manager</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeeSkills">Skills (comma-separated)</label>
+                            <input type="text" id="employeeSkills" placeholder="e.g., serving, bartending, cleaning">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Add Employee</button>
+                </form>
+                <div id="employeeList" class="employee-grid">
+                    <!-- Employees will be displayed here -->
+                </div>
+            </div>
+            <!-- Availability Tab -->
+            <div id="availability" class="tab-content">
+                <h2>Set Employee Availability</h2>
+                <div class="form-group">
+                    <label for="availabilityEmployee">Select Employee</label>
+                    <select id="availabilityEmployee">
+                        <option value="">Choose an employee</option>
+                    </select>
+                </div>
+                <div id="availabilityGrid" class="availability-grid">
+                    <!-- Availability grid will be generated here -->
+                </div>
+                <button onclick="saveAvailability()" class="btn" style="margin-top: 20px;">Save Availability</button>
+            </div>
+            <!-- Schedule Tab -->
+            <div id="schedule" class="tab-content">
+                <h2>Weekly Schedule</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button onclick="generateSchedule()" class="btn">🤖 Auto-Generate Schedule</button>
+                    <button onclick="clearSchedule()" class="btn btn-danger">Clear Schedule</button>
+                    <button onclick="showSwapModal()" class="btn btn-secondary">🔄 Swap Shifts</button>
+                </div>
+                <div class="schedule-grid">
+                    <table class="schedule-table" id="scheduleTable">
+                        <!-- Schedule table will be generated here -->
+                    </table>
+                </div>
+            </div>
+            <!-- Suggestions Tab -->
+            <div id="suggestions" class="tab-content">
+                <h2>AI-Powered Scheduling Suggestions</h2>
+                <button onclick="generateSuggestions()" class="btn">Generate New Suggestions</button>
+                <div id="suggestionsContainer" class="suggestions-box">
+                    <h3>💡 Smart Recommendations</h3>
+                    <div id="suggestionsList">
+                        <p>Click "Generate New Suggestions" to get AI-powered scheduling recommendations!</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Analytics Tab -->
+            <div id="analytics" class="tab-content">
+                <h2>Weekly Hours Analytics</h2>
+                <div id="analyticsContainer">
+                    <!-- Analytics will be displayed here -->
+                </div>
+            </div>
+        </div>
     </div>
+    <!-- Swap Modal -->
+    <div id="swapModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSwapModal()">&times;</span>
+            <h2>Swap Shifts</h2>
+            <div class="form-group">
+                <label for="employee1">Employee 1</label>
+                <select id="employee1"></select>
+            </div>
+            <div class="form-group">
+                <label for="day1">Day</label>
+                <select id="day1">
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="employee2">Employee 2</label>
+                <select id="employee2"></select>
+            </div>
+            <div class="form-group">
+                <label for="day2">Day</label>
+                <select id="day2">
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                </select>
+            </div>
+            <button onclick="performSwap()" class="btn">Swap Shifts</button>
+        </div>
+    </div>
+    <script>
+        // Data storage
+        let employees = JSON.parse(localStorage.getItem('restaurantEmployees')) || [];
+        let availability = JSON.parse(localStorage.getItem('restaurantAvailability')) || {};
+        let schedule = JSON.parse(localStorage.getItem('restaurantSchedule')) || {};
+        const timeSlots = ['9:00-13:00', '13:00-17:00', '17:00-21:00', '21:00-01:00'];
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        document.addEventListener('DOMContentLoaded', function() {
+            renderEmployees();
+            updateAvailabilityDropdown();
+            generateAvailabilityGrid();
+            generateScheduleTable();
+            updateSwapDropdowns();
+            renderAnalytics();
+        });
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => { tab.classList.remove('active'); });
+            document.querySelectorAll('.tab').forEach(tab => { tab.classList.remove('active'); });
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            if (tabName === 'schedule') { generateScheduleTable(); }
+            else if (tabName === 'analytics') { renderAnalytics(); }
+        }
+        document.getElementById('employeeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('employeeName').value;
+            const role = document.getElementById('employeeRole').value;
+            const skills = document.getElementById('employeeSkills').value.split(',').map(s => s.trim()).filter(s => s);
+            const employee = { id: Date.now(), name, role, skills, dateAdded: new Date().toLocaleDateString() };
+            employees.push(employee);
+            localStorage.setItem('restaurantEmployees', JSON.stringify(employees));
+            this.reset();
+            renderEmployees();
+            updateAvailabilityDropdown();
+            updateSwapDropdowns();
+            alert('Employee added successfully!');
+        });
+        function renderEmployees() {
+            const container = document.getElementById('employeeList');
+            if (employees.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">No employees added yet. Add your first employee above!</p>';
+                return;
+            }
+            container.innerHTML = employees.map(emp => `
+                <div class="employee-card">
+                    <h3>${emp.name}</h3>
+                    <p><strong>Role:</strong> ${emp.role}</p>
+                    <p><strong>Added:</strong> ${emp.dateAdded}</p>
+                    <div class="skills-tags">
+                        ${emp.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                    </div>
+                    <button onclick="removeEmployee(${emp.id})" class="btn btn-danger" style="margin-top: 10px;">Remove</button>
+                </div>
+            `).join('');
+        }
+        function removeEmployee(id) {
+            if (confirm('Are you sure you want to remove this employee?')) {
+                employees = employees.filter(emp => emp.id !== id);
+                localStorage.setItem('restaurantEmployees', JSON.stringify(employees));
+                delete availability[id];
+                localStorage.setItem('restaurantAvailability', JSON.stringify(availability));
+                renderEmployees();
+                updateAvailabilityDropdown();
+                updateSwapDropdowns();
+            }
+        }
+        function updateAvailabilityDropdown() {
+            const select = document.getElementById('availabilityEmployee');
+            select.innerHTML = '<option value="">Choose an employee</option>' +
+                employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
+            select.addEventListener('change', function() {
+                if (this.value) { loadEmployeeAvailability(parseInt(this.value)); }
+            });
+        }
+        function generateAvailabilityGrid() {
+            const container = document.getElementById('availabilityGrid');
+            container.innerHTML = days.map(day => `
+                <div class="day-column">
+                    <h4>${day}</h4>
+                    ${timeSlots.map(slot => `
+                        <div class="time-slot" data-day="${day}" data-slot="${slot}" onclick="toggleAvailability('${day}', '${slot}')">
+                            ${slot}
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+        function loadEmployeeAvailability(employeeId) {
+            document.querySelectorAll('.time-slot').forEach(slot => { slot.classList.remove('available'); });
+            const empAvailability = availability[employeeId] || {};
+            Object.keys(empAvailability).forEach(day => {
+                empAvailability[day].forEach(slot => {
+                    const element = document.querySelector(`[data-day="${day}"][data-slot="${slot}"]`);
+                    if (element) { element.classList.add('available'); }
+                });
+            });
+        }
+        function toggleAvailability(day, slot) {
+            const employeeId = document.getElementById('availabilityEmployee').value;
+            if (!employeeId) { alert('Please select an employee first!'); return; }
+            const element = document.querySelector(`[data-day="${day}"][data-slot="${slot}"]`);
+            element.classList.toggle('available');
+        }
+        function saveAvailability() {
+            const employeeId = document.getElementById('availabilityEmployee').value;
+            if (!employeeId) { alert('Please select an employee first!'); return; }
+            const empAvailability = {};
+            days.forEach(day => {
+                const availableSlots = [];
+                document.querySelectorAll(`[data-day="${day}"].available`).forEach(slot => {
+                    availableSlots.push(slot.dataset.slot);
+                });
+                if (availableSlots.length > 0) { empAvailability[day] = availableSlots; }
+            });
+            availability[employeeId] = empAvailability;
+            localStorage.setItem('restaurantAvailability', JSON.stringify(availability));
+            alert('Availability saved successfully!');
+        }
+        function generateScheduleTable() {
+            const table = document.getElementById('scheduleTable');
+            let html = '<tr><th>Employee</th>';
+            days.forEach(day => {
+                timeSlots.forEach(slot => {
+                    html += `<th>${day}<br>${slot}</th>`;
+                });
+            });
+            html += '<th>Total Hours</th></tr>';
+            employees.forEach(emp => {
+                html += `<tr><td><strong>${emp.name}</strong><br><small>${emp.role}</small></td>`;
+                let totalHours = 0;
+                days.forEach(day => {
+                    timeSlots.forEach(slot => {
+                        const isScheduled = schedule[emp.id] && schedule[emp.id][day] && schedule[emp.id][day].includes(slot);
+                        const isAvailable = availability[emp.id] && availability[emp.id][day] && availability[emp.id][day].includes(slot);
+                        let cellClass = 'schedule-slot';
+                        if (isScheduled) { cellClass += ' assigned'; totalHours += 4; }
+                        html += `<td class="${cellClass}" onclick="toggleSchedule(${emp.id}, '${day}', '${slot}')" 
+                                 title="${isAvailable ? 'Available' : 'Not Available'}">
+                                 ${isScheduled ? '✓' : (isAvailable ? '○' : '✗')}
+                               </td>`;
+                    });
+                });
+                html += `<td class="total-hours">${totalHours}h</td></tr>`;
+            });
+            table.innerHTML = html;
+        }
+        function toggleSchedule(employeeId, day, slot) {
+            if (!availability[employeeId] || !availability[employeeId][day] || !availability[employeeId][day].includes(slot)) {
+                alert('Employee is not available for this time slot!');
+                return;
+            }
+            if (!schedule[employeeId]) { schedule[employeeId] = {}; }
+            if (!schedule[employeeId][day]) { schedule[employeeId][day] = []; }
+            const index = schedule[employeeId][day].indexOf(slot);
+            if (index > -1) { schedule[employeeId][day].splice(index, 1); }
+            else { schedule[employeeId][day].push(slot); }
+            localStorage.setItem('restaurantSchedule', JSON.stringify(schedule));
+            generateScheduleTable();
+        }
+        function generateSchedule() {
+            if (employees.length === 0) { alert('Please add employees first!'); return; }
+            schedule = {};
+            days.forEach(day => {
+                timeSlots.forEach(slot => {
+                    const availableEmployees = employees.filter(emp => 
+                        availability[emp.id] && 
+                        availability[emp.id][day] && 
+                        availability[emp.id][day].includes(slot)
+                    );
+                    if (availableEmployees.length > 0) {
+                        availableEmployees.sort((a, b) => {
+                            const hoursA = calculateEmployeeHours(a.id);
+                            const hoursB = calculateEmployeeHours(b.id);
+                            return hoursA - hoursB;
+                        });
+                        const needed = ['17:00-21:00', '21:00-01:00'].includes(slot) ? 2 : 1;
+                        for (let i = 0; i < Math.min(needed, availableEmployees.length); i++) {
+                            const emp = availableEmployees[i];
+                            if (!schedule[emp.id]) schedule[emp.id] = {};
+                            if (!schedule[emp.id][day]) schedule[emp.id][day] = [];
+                            schedule[emp.id][day].push(slot);
+                        }
+                    }
+                });
+            });
+            localStorage.setItem('restaurantSchedule', JSON.stringify(schedule));
+            generateScheduleTable();
+            alert('Schedule generated successfully!');
+        }
+        function calculateEmployeeHours(employeeId) {
+            let hours = 0;
+            if (schedule[employeeId]) {
+                Object.values(schedule[employeeId]).forEach(daySchedule => {
+                    hours += daySchedule.length * 4;
+                });
+            }
+            return hours;
+        }
+        function clearSchedule() {
+            if (confirm('Are you sure you want to clear the entire schedule?')) {
+                schedule = {};
+                localStorage.setItem('restaurantSchedule', JSON.stringify(schedule));
+                generateScheduleTable();
+            }
+        }
+        function updateSwapDropdowns() {
+            const emp1 = document.getElementById('employee1');
+            const emp2 = document.getElementById('employee2');
+            const options = employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
+            emp1.innerHTML = '<option value="">Select Employee</option>' + options;
+            emp2.innerHTML = '<option value="">Select Employee</option>' + options;
+        }
+        function showSwapModal() { document.getElementById('swapModal').style.display = 'block'; }
+        function closeSwapModal() { document.getElementById('swapModal').style.display = 'none'; }
+        function performSwap() {
+            const emp1Id = document.getElementById('employee1').value;
+            const emp2Id = document.getElementById('employee2').value;
+            const day1 = document.getElementById('day1').value;
+            const day2 = document.getElementById('day2').value;
+            if (!emp1Id || !emp2Id) { alert('Please select both employees!'); return; }
+            const emp1Schedule = (schedule[emp1Id] && schedule[emp1Id][day1]) ? [...schedule[emp1Id][day1]] : [];
+            const emp2Schedule = (schedule[emp2Id] && schedule[emp2Id][day2]) ? [...schedule[emp2Id][day2]] : [];
+            if (!schedule[emp1Id]) schedule[emp1Id] = {};
+            if (!schedule[emp2Id]) schedule[emp2Id] = {};
+            schedule[emp1Id][day1] = emp2Schedule;
+            schedule[emp2Id][day2] = emp1Schedule;
+            localStorage.setItem('restaurantSchedule', JSON.stringify(schedule));
+            generateScheduleTable();
+            closeSwapModal();
+            alert('Shifts swapped successfully!');
+        }
+        function generateSuggestions() {
+            const suggestions = [];
+            employees.forEach(emp => {
+                const hours = calculateEmployeeHours(emp.id);
+                if (hours < 20) {
+                    suggestions.push({ type: 'Hours', message: `${emp.name} is only scheduled for ${hours} hours. Consider adding more shifts.`, action: 'low-hours' });
+                } else if (hours > 40) {
+                    suggestions.push({ type: 'Overtime', message: `${emp.name} is scheduled for ${hours} hours. Check overtime policies.`, action: 'high-hours' });
+                }
+            });
+            days.forEach(day => {
+                const scheduledEmployees = Object.keys(schedule).filter(empId => 
+                    schedule[empId][day] && schedule[empId][day].length > 0
+                );
+                const hasServer = scheduledEmployees.some(empId => {
+                    const emp = employees.find(e => e.id == empId);
+                    return emp && (emp.role === 'server' || emp.skills.includes('serving'));
+                });
+                if (!hasServer) {
+                    suggestions.push({ type: 'Skills', message: `No servers scheduled for ${day}. Ensure adequate front-of-house coverage.`, action: 'missing-skill' });
+                }
+            });
+            const container = document.getElementById('suggestionsList');
+            if (suggestions.length === 0) {
+                container.innerHTML = '<p>Great! No issues found with the current schedule. 🎉</p>';
+            } else {
+                container.innerHTML = suggestions.map(suggestion => `
+                    <div class="suggestion-item">
+                        <strong>${suggestion.type}:</strong> ${suggestion.message}
+                    </div>
+                `).join('');
+            }
+        }
+        function renderAnalytics() {
+            const container = document.getElementById('analyticsContainer');
+            if (employees.length === 0) {
+                container.innerHTML = '<p>Add employees to see analytics.</p>';
+                return;
+            }
+            let html = '<div class="employee-grid">';
+            employees.forEach(emp => {
+                const hours = calculateEmployeeHours(emp.id);
+                const dailyHours = {};
+                days.forEach(day => {
+                    dailyHours[day] = 0;
+                    if (schedule[emp.id] && schedule[emp.id][day]) {
+                        dailyHours[day] = schedule[emp.id][day].length * 4;
+                    }
+                });
+                html += `
+                    <div class="employee-card">
+                        <h3>${emp.name}</h3>
+                        <p><strong>Total Weekly Hours:</strong> ${hours}h</p>
+                        <p><strong>Daily Breakdown:</strong></p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            ${days.map(day => `<li>${day}: ${dailyHours[day]}h</li>`).join('')}
+                        </ul>
+                        <p><strong>Status:</strong> 
+                            <span style="color: ${hours < 20 ? '#e74c3c' : hours > 40 ? '#f39c12' : '#27ae60'}">
+                                ${hours < 20 ? 'Under-scheduled' : hours > 40 ? 'Overtime' : 'Optimal'}
+                            </span>
+                        </p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        window.onclick = function(event) {
+            const modal = document.getElementById('swapModal');
+            if (event.target === modal) { closeSwapModal(); }
+        }
+    </script>
 </body>
 </html>
